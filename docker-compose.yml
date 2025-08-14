@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.9'
 
 services:
   mariadb:
@@ -12,7 +12,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./mariadb_data:/var/lib/mysql   # <-- volume persistente
+      - ./mariadb_data:/var/lib/mysql   
       - ./mariadb_init/init.sql:/docker-entrypoint-initdb.d/init.sql
       
   data_loader:
@@ -24,6 +24,20 @@ services:
       - ./mariadb_init:/app
       - ./db_utils:/app/db_utils
     working_dir: /app
-    command: sh -c "sleep 15 && python load_data.py"
+    command: sh -c "sleep 10 && python load_data.py"
     environment:
       - PYTHONUNBUFFERED=1
+
+  backend:
+    build:
+      context: ./backend
+    depends_on:
+      - mariadb
+      - data_loader
+    ports:
+      - "8003:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+
+
