@@ -1,12 +1,22 @@
 from models import TableColumn
 from typing import List, Dict, Tuple
 
+
 def get_schema() -> list[TableColumn]:
-    """funzione di supporto solo per vedere il
-    funzionamento(dati alla cazzo di cane)"""
+    
     return [
-        TableColumn(table_name="movies", table_column="id"),
-        TableColumn(table_name="movies", table_column="nome")
+        TableColumn(table_name="film", table_column="id"),
+        TableColumn(table_name="film", table_column="titolo"),
+        TableColumn(table_name="film", table_column="anno"),
+        TableColumn(table_name="film", table_column="genere"),
+        TableColumn(table_name="film", table_column="piattaforma_1"),
+        TableColumn(table_name="film", table_column="piattaforma_2"),
+        TableColumn(table_name="film", table_column="regista_id"),
+        TableColumn(table_name="registi", table_column="id"),
+        TableColumn(table_name="registi", table_column="nome"),
+        TableColumn(table_name="registi", table_column="eta"),
+        TableColumn(table_name="piattaforme", table_column="id"),
+        TableColumn(table_name="piattaforme", table_column="nome"),
     ]
 
 

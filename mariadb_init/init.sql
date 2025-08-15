@@ -9,7 +9,7 @@ CREATE TABLE piattaforme (
     nome VARCHAR(100) NOT NULL UNIQUE
 );
 
-CREATE TABLE film (
+CREATE TABLE movies (
     id INT AUTO_INCREMENT PRIMARY KEY,
     titolo VARCHAR(200) NOT NULL,
     anno INT,
