@@ -1,23 +1,30 @@
 FROM python:3.11-slim
 
-# Evita bytecode e buffering
+# Evita la creazione di file .pyc e disabilita buffering stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
+# Imposta la cartella di lavoro
 WORKDIR /app
+ENV PYTHONPATH="${PYTHONPATH}:/app/db_utils"
 
-# Copia e installa dipendenze
+# Installa dipendenze di sistema necessarie per mariadb
+RUN apt-get update && apt-get install -y libmariadb-dev build-essential
+
+# Copia e installa dipendenze Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia il codice dell'applicazione
+# Copia il codice sorgente
 COPY src/ ./src/
 
-# Porta interna del container
+# Espone la porta dell'applicazione
 EXPOSE 8000  
 
-# Avvia uvicorn
+# Avvia l'app FastAPI tramite uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--app-dir", "src"]
+
+
 
 
 

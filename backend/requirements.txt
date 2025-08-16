@@ -1,4 +1,5 @@
-fastapi==0.112.2
-uvicorn[standard]==0.30.6
-pydantic==2.8.2
-typing-extensions==4.12.2
+fastapi
+uvicorn
+pydantic
+typing-extensions
+mariadb

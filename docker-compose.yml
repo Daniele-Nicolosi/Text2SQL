@@ -1,20 +1,20 @@
 version: '2.4'
 
 services:
-  mariadb:
-    image: mariadb:latest
+  mariadb: 
+    image: mariadb:latest       # Usa l'immagine ufficiale MariaDB
     container_name: mariadb
-    environment:
+    environment:                 # Variabili per inizializzare DB e utente
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: movies_db
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     ports:
-      - "3306:3306"
-    volumes:
+      - "3306:3306"             # Espone la porta 3306
+    volumes:                     # Persistenza dati e script di inizializzazione
       - ./mariadb_data:/var/lib/mysql   
       - ./mariadb_init/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
+    healthcheck:                 # Controllo stato del DB
       test: ["CMD", "mariadb", "-u", "root", "-prootpassword", "-e", "SELECT 1;"]
       interval: 5s
       timeout: 5s
@@ -23,24 +23,27 @@ services:
       
   data_loader:
     build:
-      context: ./mariadb_init
+      context: ./mariadb_init      # Costruisce il container dal Dockerfile in mariadb_init
     depends_on:
       mariadb:
-        condition: service_healthy
-    volumes:
-      - ./mariadb_init:/app
-      - ./db_utils:/app/db_utils
+        condition: service_healthy # Aspetta che MariaDB sia pronto
+    volumes:                       
+      - ./mariadb_init:/app        # Codice del loader
+      - ./db_utils:/app/db_utils   # Librerie condivise
     working_dir: /app
-    command: sh -c "python load_data.py"
+    command: sh -c "python load_data.py"  # Esegue lo script per popolare DB
     environment:
-      - PYTHONUNBUFFERED=1
+      - PYTHONUNBUFFERED=1        # Output Python non bufferizzato
 
   backend:
     build:
-      context: ./backend
+      context: ./backend           # Costruisce il backend
     depends_on:
-      - data_loader
+      - data_loader               # Aspetta che il loader finisca
     ports:
-      - "8003:8000"
+      - "8003:8000"               # Espone backend sulla porta 8003
+    volumes:                       
+      - ./backend:/app            
+      - ./db_utils:/app/db_utils  # Librerie condivise
     environment:
-      - PYTHONUNBUFFERED=1
+      - PYTHONUNBUFFERED=1        # Output Python non bufferizzato

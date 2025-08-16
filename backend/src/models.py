@@ -24,7 +24,7 @@ class SearchInput(BaseModel):
 class Property(BaseModel):
     property_name: str
     property_value: Any
-    # devo considerare null ???
+    # devo considerare null ??? SI
 
 
 class ResultItem(BaseModel):
