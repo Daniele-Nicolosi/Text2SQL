@@ -2,6 +2,10 @@ from models import TableColumn, Property, ResultItem
 from typing import List, Dict, Tuple
 from db_utils.crud import insert_or_update_film
 from db_utils.executor import execute_query
+from db_utils.schema_utils import schema_text_from_information_schema
+from text_to_sql.text_to_sql import ask_ollama
+from text_to_sql.text_to_sql import build_prompt
+
 
 
 def get_schema() -> list[TableColumn]:
@@ -30,21 +34,19 @@ def get_schema() -> list[TableColumn]:
     return columns
 
 
-def add_row_to_db(data_line: str) -> bool:
+def add_row_to_db(data_line: str) -> tuple[bool, str | None]:
     """
     Aggiunge o aggiorna una riga nel DB, usando insert_or_update_film.
+    Restituisce (True, None) se tutto ok, (False, messaggio_errore) se fallisce.
     """
-    
-    result = insert_or_update_film(data_line)
-
-    return result
+    return insert_or_update_film(data_line)
 
 
 def run_sql_query(sql_query: str) -> Tuple[str, List[Dict] | None, str | None]:
     """
     Esegue una query SQL in modalità sicura e converte i risultati in formato strutturato.
 
-    Blocca query pericolose (DROP, DELETE, UPDATE) e gestisce eventuali errori.
+    Blocca query pericolose (DROP, DELETE, UPDATE, INSERT) e gestisce eventuali errori.
 
     Args:
         sql_query (str): la query SQL da eseguire.
@@ -62,6 +64,8 @@ def run_sql_query(sql_query: str) -> Tuple[str, List[Dict] | None, str | None]:
         return "unsafe", None, "Operazione DELETE non permessa"
     if "UPDATE" in sql_query.upper():
         return "unsafe", None, "Operazione UPDATE non permessa"
+    if "INSERT" in sql_query.upper():
+        return "unsafe", None, "Operazione INSERT non permessa"
 
     # Esecuzione query tramite modulo executor
     success, rows, error = execute_query(sql_query)
@@ -87,12 +91,43 @@ def run_sql_query(sql_query: str) -> Tuple[str, List[Dict] | None, str | None]:
 
 def call_nlp_module(question: str, model: str | None = None) -> str:
     """
-    Stub: convertela domanda in SQL.
-    In futuro invocherà il modulo NLP dello studente A
+    Converte la domanda in SQL chiamando Ollama.
     """
-    if "prezzo" in question.lower():
-        return "SELECT * FROM prodotti WHERE prezzo > 50"
-    if "drop" in question.lower():
-        return "DROP ALL"
-    return "SELECT * FROM prodotti"
+    # recupera schema
+    schema_text = schema_text_from_information_schema()
+    if not schema_text:
+        error_msg = "[ERROR] Impossibile recuperare lo schema dal database."
+        print(error_msg)
+        return f"SELECT NULL AS warning -- {error_msg}"
+    
+    prompt = build_prompt(schema_text, question)
+
+    # delega a funzione dedicata
+    return ask_ollama(prompt, model)
+
+
+def call_nlp_module_retry(original_question: str, previous_sql: str, db_error: str, model: str | None = None) -> str:
+    """
+    Genera un prompt di retry per correggere una query SQL fallita e chiama Ollama.
+    """
+    schema_text = schema_text_from_information_schema()
+    if not schema_text:
+        error_msg = "[ERROR] Impossibile recuperare lo schema dal database."
+        print(error_msg)
+        return f"SELECT NULL AS warning -- {error_msg}"
+
+    # genera il prompt 
+    prompt_retry = (
+        f"Domanda originale:\n{original_question}\n\n"
+        f"Query SQL precedente:\n{previous_sql}\n\n"
+        f"Errore dal database:\n{db_error}\n\n"
+        f"Schema del database:\n{schema_text}\n\n"
+        "Correggi la query  o riprova a rigenerarla e restituisci solo una query SQL valida"
+    )
+
+    # chiama Ollama con il prompt di retry
+    return ask_ollama(prompt_retry, model)
+
+
+
 

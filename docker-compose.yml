@@ -18,8 +18,8 @@ services:
       test: ["CMD", "mariadb", "-u", "root", "-prootpassword", "-e", "SELECT 1;"]
       interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 20        # fino a 20 tentativi
+      start_period: 30s  # attesa iniziale più lunga
       
   data_loader:
     build:
@@ -31,19 +31,62 @@ services:
       - ./mariadb_init:/app        # Codice del loader
       - ./db_utils:/app/db_utils   # Librerie condivise
     working_dir: /app
-    command: sh -c "python load_data.py"  # Esegue lo script per popolare DB
+    command: sh -c "python load_data.py && tail -f /dev/null"  # # Esegue lo script e crea un file di segnalazione
     environment:
       - PYTHONUNBUFFERED=1        # Output Python non bufferizzato
+    healthcheck:                  # Controllo stato del data_loader
+      test: ["CMD-SHELL", "[ -e /proc/1 ] && exit 0 || exit 1"]  
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    
+  ollama:
+    build:
+      context: ./ollama_service            # Costruisce l'immagine di Ollama dal Dockerfile in ollama_service
+    image: text2sql-ollama:local
+    container_name: ollama
+    ports:
+      - "11434:11434"             # Espone la porta 11434 per le API di Ollama
+    volumes:
+      - ./ollama_data:/root/.ollama  # Persistenza dati di Ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:11434/api/tags | grep -q 'gemma3:1b-it-qat' && curl -fsS http://localhost:11434/api/tags | grep -q 'gemma3:1b-it-q4_K_M'"]
+      interval: 1m       # controlla ogni 1 minuto
+      timeout: 15s       # massimo 15s per tentativo
+      retries: 60        # fino a 60 tentativi falliti
+      start_period: 60s  # attesa iniziale prima del primo test
 
   backend:
     build:
       context: ./backend           # Costruisce il backend
     depends_on:
-      - data_loader               # Aspetta che il loader finisca
+      data_loader:              
+        condition: service_healthy # Aspetta che il data_loader abbia finito
+      ollama:
+        condition: service_healthy # Aspetta che Ollama sia pronto
     ports:
-      - "8003:8000"               # Espone backend sulla porta 8003
+      - "8003:8003"               # Espone backend sulla porta 8003
     volumes:                       
       - ./backend:/app            
       - ./db_utils:/app/db_utils  # Librerie condivise
+      - ./text_to_sql:/app/text_to_sql
     environment:
       - PYTHONUNBUFFERED=1        # Output Python non bufferizzato
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8003/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    environment:
+      - BACKEND_URL=http://backend:8003
+    ports:
+      - "8004:8004"
+    depends_on:
+      backend:
+        condition: service_healthy

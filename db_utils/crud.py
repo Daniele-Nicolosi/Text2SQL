@@ -1,7 +1,7 @@
 from typing import Optional
 from .connection import get_connection
 
-def get_or_create_regista(cur, nome: str, eta: Optional[int]) -> int:
+def _get_or_create_regista(cur, nome: str, eta: Optional[int]) -> int:
     """Recupera o crea un regista e restituisce il suo ID"""
     cur.execute("SELECT id FROM registi WHERE nome=? AND eta=?", (nome, eta))
     result = cur.fetchone()
@@ -12,7 +12,7 @@ def get_or_create_regista(cur, nome: str, eta: Optional[int]) -> int:
     cur.execute("INSERT INTO registi (nome, eta) VALUES (?, ?)", (nome, eta))
     return cur.lastrowid
 
-def get_or_create_piattaforma(cur, nome: Optional[str]) -> Optional[int]:
+def _get_or_create_piattaforma(cur, nome: Optional[str]) -> Optional[int]:
     """Recupera o crea una piattaforma e restituisce il suo ID"""
     if not nome:
         return None
@@ -23,7 +23,7 @@ def get_or_create_piattaforma(cur, nome: Optional[str]) -> Optional[int]:
     cur.execute("INSERT INTO piattaforme (nome) VALUES (?)", (nome,))
     return cur.lastrowid
 
-def cleanup_orphan_piattaforme(cur):
+def _cleanup_orphan_piattaforme(cur):
     """Rimuove piattaforme non più usate da nessun film"""
     cur.execute("""
         DELETE FROM piattaforme 
@@ -34,16 +34,24 @@ def cleanup_orphan_piattaforme(cur):
         )
     """)
 
-def insert_or_update_film(stringa: str) -> bool:
+def insert_or_update_film(stringa: str) -> tuple[bool, str | None]:
     """
     Inserisce o aggiorna un film a partire da una stringa CSV/TSV.
+    Restituisce (True, None) se tutto ok, (False, messaggio_errore) se fallisce.
     Formato: titolo, regista, eta, anno, genere, piattaforma_1[, piattaforma_2]
     """
     try:
         campi = [x.strip() for x in stringa.split(",")]
         if not (6 <= len(campi) <= 7):
-            print(f"[DEBUG] Input non valido, attesi 6 o 7 campi ma trovati {len(campi)}")
-            return False
+            msg = f"Input non valido, attesi 6 o 7 campi ma trovati {len(campi)}"
+            print(f"[DEBUG] {msg}")
+            return False, msg
+        
+        for i, campo in enumerate(campi[:6]):
+            if not campo:
+                msg = f"Input non valido, il campo {i+1} non può essere vuoto"
+                print(f"[DEBUG] {msg}")
+                return False, msg
 
         if len(campi) == 6:
             titolo, regista, eta, anno, genere, piattaforma_1 = campi
@@ -53,9 +61,9 @@ def insert_or_update_film(stringa: str) -> bool:
 
         conn, cur = get_connection()
 
-        regista_id = get_or_create_regista(cur, regista, int(eta) if eta else None)
-        piattaforma_1_id = get_or_create_piattaforma(cur, piattaforma_1)
-        piattaforma_2_id = get_or_create_piattaforma(cur, piattaforma_2)
+        regista_id = _get_or_create_regista(cur, regista, int(eta) if eta else None)
+        piattaforma_1_id = _get_or_create_piattaforma(cur, piattaforma_1)
+        piattaforma_2_id = _get_or_create_piattaforma(cur, piattaforma_2)
 
         cur.execute("SELECT id, piattaforma_1, piattaforma_2 FROM movies WHERE titolo=? AND regista_id=?",
                     (titolo, regista_id))
@@ -69,7 +77,7 @@ def insert_or_update_film(stringa: str) -> bool:
                 (int(anno) if anno else None, genere, piattaforma_1_id, piattaforma_2_id, regista_id, film_id)
             )
             if (old_p1 != piattaforma_1_id) or (old_p2 != piattaforma_2_id):
-                cleanup_orphan_piattaforme(cur)
+                _cleanup_orphan_piattaforme(cur)
 
             print(f"[DEBUG] Film aggiornato: {titolo}")
             
@@ -83,11 +91,12 @@ def insert_or_update_film(stringa: str) -> bool:
             print(f"[DEBUG] Film inserito: {titolo}")
 
         conn.commit()
-        return True
+        return True, None
 
     except Exception as e:
-        print(f"[DEBUG] Errore inserimento/aggiornamento: {e}")
-        return False
+        msg = f"Errore inserimento/aggiornamento: {e}"
+        print(f"[DEBUG] {msg}")
+        return False, msg
 
     finally:
         try:

@@ -1,6 +1,10 @@
 # Base image Python 3.11 slim
 FROM python:3.11-slim
 
+# Evita la creazione di file .pyc e disabilita buffering stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 # Cartella di lavoro
 WORKDIR /app
 

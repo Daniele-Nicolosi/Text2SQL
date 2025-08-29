@@ -1,10 +1,19 @@
 from fastapi import FastAPI
+from fastapi import HTTPException
 from models import TableColumn, AddInput, AddOutput, SQLSearchInput, SQLSearchOutput, SearchInput, SearchOutput, SearchWithRetryOutput
 from typing import List
 from utils import get_schema, add_row_to_db,run_sql_query
 from utils import call_nlp_module
+from utils import call_nlp_module_retry
+
 
 app = FastAPI()
+
+
+#endpoint -- root
+@app.get("/", response_model=AddOutput)
+def root()-> AddOutput:
+    return AddOutput(status="ok")
 
 
 #endpoint -- schema_summary
@@ -16,10 +25,10 @@ def schema_summary() -> List[TableColumn]:
 #endpoint -- add
 @app.post("/add", response_model=AddOutput)
 def add(data: AddInput) -> AddOutput:
-    success = add_row_to_db(data.data_line)
+    success, error_msg = add_row_to_db(data.data_line)
     if success:
         return AddOutput(status="ok")
-    return AddOutput(status="error")
+    raise HTTPException(status_code=422, detail=error_msg)
 
 
 #endpoint -- search
@@ -27,8 +36,7 @@ def add(data: AddInput) -> AddOutput:
 def search(body: SearchInput) -> SearchOutput :
     sql_traduction = call_nlp_module(body.question, body.model)
     valid, result, _ = run_sql_query(sql_traduction)
-    #ci ho messo il trattino per il terzo elemento
-    #del risultato in quanto non ne ho bisogno
+
     if valid != "valid":
         return SearchOutput(sql=sql_traduction, sql_validation=valid, results=None)
     return SearchOutput(sql=sql_traduction, sql_validation=valid, results=result)
@@ -38,6 +46,7 @@ def search(body: SearchInput) -> SearchOutput :
 @app.post("/sql_search", response_model=SQLSearchOutput)
 def sql_search(req: SQLSearchInput) -> SQLSearchOutput:
     validation, results, _ = run_sql_query(req.sql_query)
+    
     if validation != "valid":
         return SQLSearchOutput(sql_validation=validation, results=None)
     return SQLSearchOutput(sql_validation=validation, results=results)
@@ -49,23 +58,8 @@ def search_with_retry(body: SearchInput) -> SearchWithRetryOutput:
     sql_query = call_nlp_module(body.question, body.model)
     valid, result, error = run_sql_query(sql_query)
     if valid != "valid":
-        #ho formatto cosi prompt_retry perchè a quannto pare CHAT mi dice
-        # che gli spazi causati dall'indentazione potrebbero dare fastidio
-        prompt_retry = (
-f"""Domanda originale:
-{body.question}
-
-query SQL precedente:
-{sql_query}
-
-Errore dal database:
-{error}
-
-Correggi la query e restituisci solo una query SQL valida
-"""
-    )
         attempt_1 = SearchOutput(sql=sql_query, sql_validation=valid, results=None)
-        sql_retry = call_nlp_module(prompt_retry, body.model)
+        sql_retry = call_nlp_module_retry(body.question, sql_query, error, body.model)
         valid, result, error = run_sql_query(sql_retry)
         if valid != "valid":
             return SearchWithRetryOutput(attempt_1=attempt_1, attempt_2=SearchOutput(sql=sql_retry, sql_validation=valid, results=None))

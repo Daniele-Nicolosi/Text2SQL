@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% if error %}
+  <div class="card" style="border-color:#5b2733;">
+    <h2>Errore</h2>
+    <div class="mono">{{ error }}</div>
+  </div>
+{% endif %}
+
+<div class="grid">
+
+  <!-- Schema Summary -->
+  <section class="card">
+    <h2>Schema Summary</h2>
+    <form action="/schema_summary" method="post">
+      <button type="submit">Mostra schema</button>
+    </form>
+    {% if schema %}
+      <div class="mono" style="margin-top:10px;">
+        {% set grouped = {} %}
+        {% for c in schema %}
+          {% set _ = grouped.setdefault(c.table_name, []).append(c.table_column) %}
+        {% endfor %}
+        {% for tbl, cols in grouped.items() %}
+TABLE {{ tbl }}({{ ", ".join(cols) }});
+        {% endfor %}
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Search (Text-to-SQL) -->
+  <section class="card">
+    <h2>Search (Text → SQL)</h2>
+    <form action="/search" method="post">
+      <label class="muted">Domanda</label>
+      <textarea name="question" placeholder="Es. Elenca i film dopo il 2015">{{ question or "" }}</textarea>
+      <div class="row" style="margin-top:8px;">
+        <input type="text" name="model" placeholder="Modello Ollama (opzionale)" value="{{ model or '' }}">
+        <button type="submit">Esegui search</button>
+      </div>
+    </form>
+
+    {% if search %}
+      <div style="margin-top:10px;">
+        <div><strong>SQL generato</strong> <span class="tag">{{ search.sql_validation }}</span></div>
+        <div class="mono">{{ search.sql }}</div>
+
+        {% if search.results %}
+          <div style="margin-top:8px;"><strong>Risultati</strong></div>
+          {% for item in search.results %}
+            <details>
+              <summary>{{ item.item_type }}</summary>
+              <ul>
+                {% for p in item.properties %}
+                  <li><strong>{{ p.property_name }}:</strong> {{ p.property_value }}</li>
+                {% endfor %}
+              </ul>
+            </details>
+          {% endfor %}
+        {% else %}
+          <div class="muted" style="margin-top:8px;">Nessun risultato o SQL non valido.</div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Search with Retry (solo gruppi da 3) -->
+  <section class="card">
+    <h2>Search with Retry</h2>
+    <form action="/search_with_retry" method="post">
+      <label class="muted">Domanda</label>
+      <textarea name="question" placeholder="Es. Elenca i film dopo il 2015">{{ question_retry or "" }}</textarea>
+      <div class="row" style="margin-top:8px;">
+        <input type="text" name="model" placeholder="Modello Ollama (opzionale)" value="{{ model_retry or '' }}">
+        <button type="submit">Esegui search_with_retry</button>
+      </div>
+    </form>
+
+    {% if search_with_retry %}
+      <div style="margin-top:10px;">
+        <div><strong>Attempt 1</strong> <span class="tag">{{ search_with_retry.attempt_1.sql_validation }}</span></div>
+        <div class="mono">{{ search_with_retry.attempt_1.sql }}</div>
+        {% if search_with_retry.attempt_1.results %}
+          <div style="margin-top:6px;"><strong>Risultati</strong></div>
+          {% for item in search_with_retry.attempt_1.results %}
+            <details>
+              <summary>{{ item.item_type }}</summary>
+              <ul>
+                {% for p in item.properties %}
+                  <li><strong>{{ p.property_name }}:</strong> {{ p.property_value }}</li>
+                {% endfor %}
+              </ul>
+            </details>
+          {% endfor %}
+        {% endif %}
+
+        {% if search_with_retry.attempt_2 %}
+          <hr style="border-color:#223a61; margin:12px 0;">
+          <div><strong>Attempt 2</strong> <span class="tag">{{ search_with_retry.attempt_2.sql_validation }}</span></div>
+          <div class="mono">{{ search_with_retry.attempt_2.sql }}</div>
+          {% if search_with_retry.attempt_2.results %}
+            <div style="margin-top:6px;"><strong>Risultati</strong></div>
+            {% for item in search_with_retry.attempt_2.results %}
+              <details>
+                <summary>{{ item.item_type }}</summary>
+                <ul>
+                  {% for p in item.properties %}
+                    <li><strong>{{ p.property_name }}:</strong> {{ p.property_value }}</li>
+                  {% endfor %}
+                </ul>
+              </details>
+            {% endfor %}
+          {% else %}
+            <div class="muted" style="margin-top:8px;">Nessun risultato al secondo tentativo.</div>
+          {% endif %}
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- SQL Search -->
+  <section class="card">
+    <h2>SQL Search (manuale)</h2>
+    <form action="/sql_search" method="post">
+      <label class="muted">Query SQL</label>
+      <textarea name="sql_query" placeholder="Es. SELECT * FROM movies LIMIT 10;">{{ sql_query or "" }}</textarea>
+      <div class="row" style="margin-top:8px;">
+        <button type="submit">Esegui sql_search</button>
+      </div>
+    </form>
+
+    {% if sql_search %}
+      <div style="margin-top:10px;">
+        <div><strong>Validazione</strong> <span class="tag">{{ sql_search.sql_validation }}</span></div>
+        {% if sql_search.results %}
+          <div style="margin-top:6px;"><strong>Risultati</strong></div>
+          {% for item in sql_search.results %}
+            <details>
+              <summary>{{ item.item_type }}</summary>
+              <ul>
+                {% for p in item.properties %}
+                  <li><strong>{{ p.property_name }}:</strong> {{ p.property_value }}</li>
+                {% endfor %}
+              </ul>
+            </details>
+          {% endfor %}
+        {% else %}
+          <div class="muted" style="margin-top:8px;">Nessun risultato o SQL non valido.</div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Add -->
+  <section class="card">
+    <h2>Add (inserimento riga formattata)</h2>
+    <form action="/add" method="post">
+      <label class="muted">Data line (formato richiesto dall’esonero)</label>
+      <input type="text" name="data_line" placeholder='Esempio: "Titolo;2019;Genere;..."' value="{{ add_input or '' }}">
+      <div class="row" style="margin-top:8px;">
+        <button type="submit">Esegui add</button>
+      </div>
+    </form>
+    {% if add_status %}
+      <div style="margin-top:10px;">
+        {% if add_status == "ok" %}
+          <span class="status-ok">✅ Inserimento riuscito.</span>
+        {% else %}
+          <span class="status-err">❌ Errore di formattazione o inserimento.</span>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+
+{% endblock %}

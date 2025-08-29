@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Text-to-SQL – Frontend</title>
+  <style>
+    :root { --bg:#0b1220; --card:#111a2b; --muted:#93a1b0; --text:#e6edf3; --accent:#3b82f6; --ok:#16a34a; --warn:#f59e0b; --err:#ef4444; }
+    body { background:var(--bg); color:var(--text); font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif; margin:0; }
+    header { padding:20px; border-bottom:1px solid #20304a; }
+    main { padding:20px; max-width:1100px; margin:0 auto; }
+    h1{ margin:0 0 6px; font-size:22px; }
+    .grid{ display:grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap:16px; }
+    .card{ background:var(--card); border:1px solid #20304a; border-radius:12px; padding:14px; }
+    .card h2{ font-size:18px; margin:0 0 8px; }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    input[type="text"], textarea, select { width:100%; background:#0b1526; border:1px solid #21324f; border-radius:8px; color:var(--text); padding:10px; font-size:14px; }
+    textarea { min-height:92px; }
+    button { background:var(--accent); color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:600; }
+    button:hover{ filter:brightness(1.1); }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space:pre-wrap; word-break:break-word; }
+    .tag{ display:inline-block; padding:2px 8px; border-radius:8px; font-size:12px; background:#0e223d; border:1px solid #223a61; margin-left:6px; }
+    .muted{ color:var(--muted); font-size:13px; }
+    details{ background:#0e182a; border:1px solid #223a61; border-radius:8px; padding:8px 10px; margin:6px 0; }
+    summary{ cursor:pointer; font-weight:600; }
+    .status-ok{ color:var(--ok); }
+    .status-err{ color:var(--err); }
+    ul{ margin:6px 0 0 16px; }
+    table{ width:100%; border-collapse: collapse; }
+    th, td{ border:1px solid #223a61; padding:6px 8px; text-align:left; }
+    th{ background:#0e223d; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Interfaccia – Text-to-SQL (Frontend)</h1>
+  <div class="muted">Chiama il backend per Schema, Search, Search with Retry, SQL Search, Add</div>
+</header>
+<main>
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

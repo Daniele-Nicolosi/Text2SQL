@@ -1,5 +1,5 @@
 from typing import List, Dict, Tuple, Optional
-from connection import get_connection
+from .connection import get_connection
 
 def execute_query(sql_query: str) -> Tuple[bool, Optional[List[Dict]], Optional[str]]:
     """
