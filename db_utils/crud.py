@@ -70,13 +70,13 @@ def insert_or_update_film(stringa: str) -> tuple[bool, str | None]:
         campi = [x.strip() for x in stringa.split(",")]
         if not (6 <= len(campi) <= 7):
             msg = f"Input non valido, attesi 6 o 7 campi ma trovati {len(campi)}"
-            print(f"[DEBUG] {msg}")
+            print(f"[ERRORE] {msg}")
             return False, msg
         
         for i, campo in enumerate(campi[:6]):
             if not campo:
                 msg = f"Input non valido, il campo {i+1} non può essere vuoto"
-                print(f"[DEBUG] {msg}")
+                print(f"[ERRORE] {msg}")
                 return False, msg
 
         if len(campi) == 6:
@@ -121,7 +121,7 @@ def insert_or_update_film(stringa: str) -> tuple[bool, str | None]:
 
     except Exception as e:
         msg = f"Errore inserimento/aggiornamento: {e}"
-        print(f"[DEBUG] {msg}")
+        print(f"[ERRORE] {msg}")
         return False, msg
 
     finally:

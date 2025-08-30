@@ -93,11 +93,17 @@ def call_nlp_module_retry(original_question: str, previous_sql: str, db_error: s
         return f"SELECT NULL AS warning -- {error_msg}"
 
     prompt_retry = (
-        f"Domanda originale:\n{original_question}\n\n"
-        f"Query SQL precedente:\n{previous_sql}\n\n"
-        f"Errore dal database:\n{db_error}\n\n"
-        f"Schema del database:\n{schema_text}\n\n"
-        "Correggi la query o riprova a rigenerarla e restituisci solo una query SQL valida"
+        f"Sei un assistente SQL. Il tuo compito è correggere query SQL fallite.\n\n"
+        f"1. Domanda originale dell'utente:\n{original_question}\n\n"
+        f"2. Query SQL precedente che ha fallito:\n{previous_sql}\n\n"
+        f"3. Errore restituito dal database:\n{db_error}\n\n"
+        f"4. Schema del database:\n{schema_text}\n\n"
+        "Istruzioni:\n"
+        "- Analizza l'errore e correggi la query SQL.\n"
+        "- Assicurati che la query sia valida e coerente con lo schema.\n"
+        "- Non aggiungere spiegazioni o testo extra, restituisci solo la query SQL pronta per l'esecuzione.\n"
+        "- Mantieni lo scopo originale della domanda dell'utente.\n\n"
+        "Restituisci solo la query SQL corretta."
     )
 
     return ask_ollama(prompt_retry, model)
