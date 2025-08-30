@@ -6,7 +6,7 @@ def schema_text_from_information_schema() -> str | None:
     """
     Costruisce una rappresentazione compatta dello schema leggendo da information_schema.
     Ritorna una stringa tipo:
-        TABLE movies(id, titolo, anno, genere, piattaforma_1, piattaforma_2, regista_id);
+        TABLE movies(id, titolo, anno, genere, piattaforma_1_id, piattaforma_2_id, regista_id);
         TABLE registi(id, nome, eta);
         TABLE piattaforme(id, nome);
     oppure None se qualcosa va storto.

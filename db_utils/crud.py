@@ -35,9 +35,9 @@ def _cleanup_orphan_piattaforme(cur):
     cur.execute("""
         SELECT id, nome FROM piattaforme 
         WHERE id NOT IN (
-            SELECT DISTINCT piattaforma_1 FROM movies WHERE piattaforma_1 IS NOT NULL
+            SELECT DISTINCT piattaforma_1_id FROM movies WHERE piattaforma_1_id IS NOT NULL
             UNION
-            SELECT DISTINCT piattaforma_2 FROM movies WHERE piattaforma_2 IS NOT NULL
+            SELECT DISTINCT piattaforma_2_id FROM movies WHERE piattaforma_2_id IS NOT NULL
         )
     """)
     orphan_piattaforme = cur.fetchall()
@@ -46,9 +46,9 @@ def _cleanup_orphan_piattaforme(cur):
     cur.execute("""
         DELETE FROM piattaforme 
         WHERE id NOT IN (
-            SELECT DISTINCT piattaforma_1 FROM movies WHERE piattaforma_1 IS NOT NULL
+            SELECT DISTINCT piattaforma_1_id FROM movies WHERE piattaforma_1_id IS NOT NULL
             UNION
-            SELECT DISTINCT piattaforma_2 FROM movies WHERE piattaforma_2 IS NOT NULL
+            SELECT DISTINCT piattaforma_2_id FROM movies WHERE piattaforma_2_id IS NOT NULL
         )
     """)
 
@@ -91,14 +91,14 @@ def insert_or_update_film(stringa: str) -> tuple[bool, str | None]:
         piattaforma_1_id = _get_or_create_piattaforma(cur, piattaforma_1)
         piattaforma_2_id = _get_or_create_piattaforma(cur, piattaforma_2)
 
-        cur.execute("SELECT id, piattaforma_1, piattaforma_2 FROM movies WHERE titolo=? AND regista_id=?",
+        cur.execute("SELECT id, piattaforma_1_id, piattaforma_2_id FROM movies WHERE titolo=? AND regista_id=?",
                     (titolo, regista_id))
         result = cur.fetchone()
 
         if result:
-            film_id, old_p1, old_p2 = result['id'], result['piattaforma_1'], result['piattaforma_2']
+            film_id, old_p1, old_p2 = result['id'], result['piattaforma_1_id'], result['piattaforma_2_id']
             cur.execute(
-                """UPDATE movies SET anno=?, genere=?, piattaforma_1=?, piattaforma_2=?, regista_id=?
+                """UPDATE movies SET anno=?, genere=?, piattaforma_1_id=?, piattaforma_2_id=?, regista_id=?
                    WHERE id=?""",
                 (int(anno) if anno else None, genere, piattaforma_1_id, piattaforma_2_id, regista_id, film_id)
             )
@@ -109,7 +109,7 @@ def insert_or_update_film(stringa: str) -> tuple[bool, str | None]:
             
         else:
             cur.execute(
-                """INSERT INTO movies (titolo, anno, genere, piattaforma_1, piattaforma_2, regista_id)
+                """INSERT INTO movies (titolo, anno, genere, piattaforma_1_id, piattaforma_2_id, regista_id)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 (titolo, int(anno) if anno else None, genere, piattaforma_1_id, piattaforma_2_id, regista_id)
             )
