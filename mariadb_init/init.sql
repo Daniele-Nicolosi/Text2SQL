@@ -17,11 +17,11 @@ CREATE TABLE movies (
     titolo VARCHAR(200) NOT NULL,       -- Titolo del film
     anno INT,                            -- Anno di uscita
     genere VARCHAR(100),                 -- Genere film
-    piattaforma_1 INT,                   -- Riferimento a piattaforma
-    piattaforma_2 INT,                   -- Riferimento a seconda piattaforma
+    piattaforma_1_id INT,                -- Riferimento a piattaforma
+    piattaforma_2_id INT,                -- Riferimento a seconda piattaforma
     regista_id INT,                      -- Riferimento a regista
     FOREIGN KEY (regista_id) REFERENCES registi(id),
-    FOREIGN KEY (piattaforma_1) REFERENCES piattaforme(id),
-    FOREIGN KEY (piattaforma_2) REFERENCES piattaforme(id)
+    FOREIGN KEY (piattaforma_1_id) REFERENCES piattaforme(id),
+    FOREIGN KEY (piattaforma_2_id) REFERENCES piattaforme(id)
 );
 

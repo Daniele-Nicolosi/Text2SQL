@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Text-to-SQL – Frontend</title>
+
+  <!-- Stili principali dell'interfaccia -->
   <style>
     :root { --bg:#0b1220; --card:#111a2b; --muted:#93a1b0; --text:#e6edf3; --accent:#3b82f6; --ok:#16a34a; --warn:#f59e0b; --err:#ef4444; }
     body { background:var(--bg); color:var(--text); font-family:system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif; margin:0; }
@@ -32,12 +34,16 @@
   </style>
 </head>
 <body>
+<!-- Intestazione principale -->
 <header>
   <h1>Interfaccia – Text-to-SQL (Frontend)</h1>
   <div class="muted">Chiama il backend per Schema, Search, Search with Retry, SQL Search, Add</div>
 </header>
+
+<!-- Contenuto dinamico principale -->
 <main>
   {% block content %}{% endblock %}
 </main>
 </body>
 </html>
+

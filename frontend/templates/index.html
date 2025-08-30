@@ -2,6 +2,7 @@
 {% block content %}
 
 {% if error %}
+  <!-- Mostra un errore generale se presente -->
   <div class="card" style="border-color:#5b2733;">
     <h2>Errore</h2>
     <div class="mono">{{ error }}</div>
@@ -13,6 +14,7 @@
   <!-- Schema Summary -->
   <section class="card">
     <h2>Schema Summary</h2>
+    <!-- Form per richiedere lo schema al backend -->
     <form action="/schema_summary" method="post">
       <button type="submit">Mostra schema</button>
     </form>
@@ -22,6 +24,7 @@
         {% for c in schema %}
           {% set _ = grouped.setdefault(c.table_name, []).append(c.table_column) %}
         {% endfor %}
+        <!-- Visualizza tabelle e colonne raggruppate -->
         {% for tbl, cols in grouped.items() %}
 TABLE {{ tbl }}({{ ", ".join(cols) }});
         {% endfor %}
@@ -32,6 +35,7 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
   <!-- Search (Text-to-SQL) -->
   <section class="card">
     <h2>Search (Text → SQL)</h2>
+    <!-- Form per inviare domanda testuale e modello opzionale -->
     <form action="/search" method="post">
       <label class="muted">Domanda</label>
       <textarea name="question" placeholder="Es. Elenca i film dopo il 2015">{{ question or "" }}</textarea>
@@ -42,12 +46,14 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
     </form>
 
     {% if search %}
+      <!-- Risultati della query Text-to-SQL -->
       <div style="margin-top:10px;">
         <div><strong>SQL generato</strong> <span class="tag">{{ search.sql_validation }}</span></div>
         <div class="mono">{{ search.sql }}</div>
 
         {% if search.results %}
           <div style="margin-top:8px;"><strong>Risultati</strong></div>
+          <!-- Elenco dettagliato dei risultati -->
           {% for item in search.results %}
             <details>
               <summary>{{ item.item_type }}</summary>
@@ -65,9 +71,10 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
     {% endif %}
   </section>
 
-  <!-- Search with Retry (solo gruppi da 3) -->
+  <!-- Search with Retry -->
   <section class="card">
     <h2>Search with Retry</h2>
+    <!-- Form simile a Search, permette retry -->
     <form action="/search_with_retry" method="post">
       <label class="muted">Domanda</label>
       <textarea name="question" placeholder="Es. Elenca i film dopo il 2015">{{ question_retry or "" }}</textarea>
@@ -78,6 +85,7 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
     </form>
 
     {% if search_with_retry %}
+      <!-- Mostra i tentativi e i risultati -->
       <div style="margin-top:10px;">
         <div><strong>Attempt 1</strong> <span class="tag">{{ search_with_retry.attempt_1.sql_validation }}</span></div>
         <div class="mono">{{ search_with_retry.attempt_1.sql }}</div>
@@ -96,6 +104,7 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
         {% endif %}
 
         {% if search_with_retry.attempt_2 %}
+          <!-- Secondo tentativo -->
           <hr style="border-color:#223a61; margin:12px 0;">
           <div><strong>Attempt 2</strong> <span class="tag">{{ search_with_retry.attempt_2.sql_validation }}</span></div>
           <div class="mono">{{ search_with_retry.attempt_2.sql }}</div>
@@ -122,6 +131,7 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
   <!-- SQL Search -->
   <section class="card">
     <h2>SQL Search (manuale)</h2>
+    <!-- Form per inserire query SQL diretta -->
     <form action="/sql_search" method="post">
       <label class="muted">Query SQL</label>
       <textarea name="sql_query" placeholder="Es. SELECT * FROM movies LIMIT 10;">{{ sql_query or "" }}</textarea>
@@ -131,6 +141,7 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
     </form>
 
     {% if sql_search %}
+      <!-- Risultati della query SQL diretta -->
       <div style="margin-top:10px;">
         <div><strong>Validazione</strong> <span class="tag">{{ sql_search.sql_validation }}</span></div>
         {% if sql_search.results %}
@@ -152,17 +163,19 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
     {% endif %}
   </section>
 
-  <!-- Add -->
+  <!-- Add (inserimento riga) -->
   <section class="card">
     <h2>Add (inserimento riga formattata)</h2>
+    <!-- Form per inserire nuova riga nel DB -->
     <form action="/add" method="post">
-      <label class="muted">Data line (formato richiesto dall’esonero)</label>
+      <label class="muted">Data line (formato richiesto)</label>
       <input type="text" name="data_line" placeholder='Esempio: "Titolo;2019;Genere;..."' value="{{ add_input or '' }}">
       <div class="row" style="margin-top:8px;">
         <button type="submit">Esegui add</button>
       </div>
     </form>
     {% if add_status %}
+      <!-- Stato dell'inserimento -->
       <div style="margin-top:10px;">
         {% if add_status == "ok" %}
           <span class="status-ok">✅ Inserimento riuscito.</span>
@@ -176,3 +189,4 @@ TABLE {{ tbl }}({{ ", ".join(cols) }});
 </div>
 
 {% endblock %}
+

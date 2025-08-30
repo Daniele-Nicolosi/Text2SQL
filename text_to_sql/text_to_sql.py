@@ -1,13 +1,17 @@
 import re
 import os
-import re
 import json
 import requests
 
 def build_prompt(schema_text: str, question: str) -> str:
     """
-    Prompt robusto in italiano, con regole SQL-only per MariaDB.
+    Costruisce un prompt per il modello Ollama in italiano.
+    Regole:
+    - Solo SELECT o CTE WITH + SELECT.
+    - Usa esclusivamente tabelle/colonne presenti nello schema.
+    - Nessuna spiegazione, solo SQL.
     """
+
     return (
         "Sei un assistente Text-to-SQL per MariaDB.\n"
         "Regole IMPORTANTI:\n"
@@ -24,12 +28,15 @@ def build_prompt(schema_text: str, question: str) -> str:
 
 def _sanitize_sql(sql: str) -> str:
     """
-    Pulisce l'output del modello:
-    - rimuove fence ```...``` e testo extra; tiene da WITH/SELECT in avanti
-    - impone una sola istruzione (prima del primo ';')
-    - blocca keyword pericolose
-    - forza SELECT-only; se non inizia con SELECT/WITH, fallback prudente
+    Sanifica l'output LLM per garantire sicurezza:
+    - Rimuove backtick/fence Markdown.
+    - Isola da WITH/SELECT in avanti.
+    - Limita a una sola istruzione.
+    - Blocca keyword pericolose (INSERT/UPDATE/...).
+    - Se non inizia con SELECT/WITH, ritorna fallback sicuro.
+    Restituisce sempre una query SELECT valida (o un fallback).
     """
+
     s = sql.strip()
 
     # rimuovi fence tipo ```sql ... ``` o ```
@@ -58,11 +65,13 @@ def _sanitize_sql(sql: str) -> str:
 
 def ask_ollama(prompt : str, model: str | None = None) -> str:
     """
-    Interroga Ollama.
-    Restituisce una query SQL sanificata (solo SELECT).
+    Interroga Ollama via API REST (/api/chat).
+    - Usa modello indicato o default 'gemma3:1b-it-qat'.
+    - Host configurabile via env OLLAMA_HOST (default: http://ollama:11434).
+    - Restituisce una query SQL SELECT (sanificata con _sanitize_sql).
     """
     
-    # 1) setup modello
+    # setup modello
     default_model = "gemma3:1b-it-qat"
     use_model = (model or "").strip() or default_model
 
@@ -90,5 +99,5 @@ def ask_ollama(prompt : str, model: str | None = None) -> str:
         sql = _sanitize_sql(raw)
         return sql if sql else "SELECT NULL AS warning -- [ERROR] Output vuoto"
     except Exception as e:
-        print(f"[DEBUG] Errore in _ask_ollama: {e}")
+        print(f"[DEBUG] Errore in ask_ollama: {e}")
         return f"SELECT NULL AS warning -- [ERROR] {e}"

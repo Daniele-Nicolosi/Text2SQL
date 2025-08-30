@@ -1,8 +1,7 @@
 import os
+import requests
 from pathlib import Path
 from typing import Optional
-
-import requests
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,12 +12,12 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8003").rstrip("/")
 
 app = FastAPI()
 
-# Static (opzionale, se vuoi mettere CSS in /frontend/static)
+# Static files (CSS/JS opzionali)
 static_dir = Path(__file__).resolve().parents[1] / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-# Templates
+# Templates directory
 templates_dir = Path(__file__).resolve().parents[1] / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 
@@ -27,17 +26,22 @@ templates = Jinja2Templates(directory=str(templates_dir))
 
 @app.get("/", response_class=HTMLResponse)
 def ui_home(request: Request):
+    """
+    Home page principale dell'interfaccia web.
+    """
     return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.post("/schema_summary", response_class=HTMLResponse)
 def ui_schema_summary(request: Request):
+    """
+    Recupera e mostra lo schema del database.
+    """
     try:
         r = requests.get(f"{BACKEND_URL}/schema_summary", timeout=30)
         r.raise_for_status()
         schema = r.json()
     except Exception as e:
-        schema = None
         error = f"Errore nel recupero dello schema: {e}"
         return templates.TemplateResponse("index.html", {"request": request, "error": error})
 
@@ -48,6 +52,9 @@ def ui_schema_summary(request: Request):
 def ui_search(request: Request,
               question: str = Form(...),
               model: Optional[str] = Form(None)):
+    """
+    Text-to-SQL: genera una query SQL a partire da una domanda in linguaggio naturale.
+    """
     payload = {"question": question, "model": model or None}
     try:
         r = requests.post(f"{BACKEND_URL}/search", json=payload, timeout=120)
@@ -59,9 +66,9 @@ def ui_search(request: Request,
             "results": data.get("results")
         }
     except Exception as e:
-        search = None
         error = f"Errore nella richiesta /search: {e}"
-        return templates.TemplateResponse("index.html", {"request": request, "error": error, "question": question, "model": model})
+        return templates.TemplateResponse("index.html",
+                                          {"request": request, "error": error, "question": question, "model": model})
 
     ctx = {"request": request, "search": search, "question": question, "model": model}
     return templates.TemplateResponse("index.html", ctx)
@@ -71,6 +78,9 @@ def ui_search(request: Request,
 def ui_search_with_retry(request: Request,
                          question: str = Form(...),
                          model: Optional[str] = Form(None)):
+    """
+    Text-to-SQL con tentativi multipli (retry) se il primo fallisce.
+    """
     payload = {"question": question, "model": model or None}
     try:
         r = requests.post(f"{BACKEND_URL}/search_with_retry", json=payload, timeout=180)
@@ -78,21 +88,23 @@ def ui_search_with_retry(request: Request,
         data = r.json()
         s1 = data.get("attempt_1")
         s2 = data.get("attempt_2")
-        search_with_retry = {
-            "attempt_1": s1,
-            "attempt_2": s2
-        }
+        search_with_retry = {"attempt_1": s1, "attempt_2": s2}
     except Exception as e:
-        search_with_retry = None
         error = f"Errore nella richiesta /search_with_retry: {e}"
-        return templates.TemplateResponse("index.html", {"request": request, "error": error, "question_retry": question, "model_retry": model})
+        return templates.TemplateResponse("index.html",
+                                          {"request": request, "error": error,
+                                           "question_retry": question, "model_retry": model})
 
-    ctx = {"request": request, "search_with_retry": search_with_retry, "question_retry": question, "model_retry": model}
+    ctx = {"request": request, "search_with_retry": search_with_retry,
+           "question_retry": question, "model_retry": model}
     return templates.TemplateResponse("index.html", ctx)
 
 
 @app.post("/sql_search", response_class=HTMLResponse)
 def ui_sql_search(request: Request, sql_query: str = Form(...)):
+    """
+    Esegue direttamente una query SQL fornita dall'utente.
+    """
     payload = {"sql_query": sql_query}
     try:
         r = requests.post(f"{BACKEND_URL}/sql_search", json=payload, timeout=120)
@@ -103,9 +115,9 @@ def ui_sql_search(request: Request, sql_query: str = Form(...)):
             "results": data.get("results")
         }
     except Exception as e:
-        sql_search = None
         error = f"Errore nella richiesta /sql_search: {e}"
-        return templates.TemplateResponse("index.html", {"request": request, "error": error, "sql_query": sql_query})
+        return templates.TemplateResponse("index.html",
+                                          {"request": request, "error": error, "sql_query": sql_query})
 
     ctx = {"request": request, "sql_search": sql_search, "sql_query": sql_query}
     return templates.TemplateResponse("index.html", ctx)
@@ -113,6 +125,9 @@ def ui_sql_search(request: Request, sql_query: str = Form(...)):
 
 @app.post("/add", response_class=HTMLResponse)
 def ui_add(request: Request, data_line: str = Form(...)):
+    """
+    Inserisce una riga nel database secondo il formato richiesto.
+    """
     payload = {"data_line": data_line}
     try:
         r = requests.post(f"{BACKEND_URL}/add", json=payload, timeout=60)
@@ -120,6 +135,10 @@ def ui_add(request: Request, data_line: str = Form(...)):
         status = (r.json() or {}).get("status", "error")
     except Exception as e:
         status = "error"
-        return templates.TemplateResponse("index.html", {"request": request, "add_status": status, "add_input": data_line, "error": f"Errore /add: {e}"})
+        return templates.TemplateResponse("index.html",
+                                          {"request": request, "add_status": status,
+                                           "add_input": data_line, "error": f"Errore /add: {e}"})
 
     return templates.TemplateResponse("index.html", {"request": request, "add_status": status, "add_input": data_line})
+
+

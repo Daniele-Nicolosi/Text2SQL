@@ -1,40 +1,38 @@
-version: '2.4'
-
 services:
   mariadb: 
-    image: mariadb:latest       # Usa l'immagine ufficiale MariaDB
+    image: mariadb:latest
     container_name: mariadb
-    environment:                 # Variabili per inizializzare DB e utente
+    environment:                 # credenziali e DB iniziale
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: movies_db
       MYSQL_USER: user
       MYSQL_PASSWORD: password
     ports:
-      - "3306:3306"             # Espone la porta 3306
-    volumes:                     # Persistenza dati e script di inizializzazione
+      - "3306:3306"              # espone MariaDB
+    volumes:                     # dati e script di init
       - ./mariadb_data:/var/lib/mysql   
       - ./mariadb_init/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:                 # Controllo stato del DB
+    healthcheck:                 # verifica che il DB risponda
       test: ["CMD", "mariadb", "-u", "root", "-prootpassword", "-e", "SELECT 1;"]
       interval: 5s
       timeout: 5s
-      retries: 20        # fino a 20 tentativi
-      start_period: 30s  # attesa iniziale più lunga
+      retries: 20
+      start_period: 30s
       
   data_loader:
     build:
-      context: ./mariadb_init      # Costruisce il container dal Dockerfile in mariadb_init
+      context: ./mariadb_init    # Dockerfile del loader
     depends_on:
       mariadb:
-        condition: service_healthy # Aspetta che MariaDB sia pronto
-    volumes:                       
-      - ./mariadb_init:/app        # Codice del loader
-      - ./db_utils:/app/db_utils   # Librerie condivise
+        condition: service_healthy
+    volumes:                     
+      - ./mariadb_init:/app      
+      - ./db_utils:/app/db_utils
     working_dir: /app
-    command: sh -c "python load_data.py && tail -f /dev/null"  # # Esegue lo script e crea un file di segnalazione
+    command: sh -c "python load_data.py && tail -f /dev/null"
     environment:
-      - PYTHONUNBUFFERED=1        # Output Python non bufferizzato
-    healthcheck:                  # Controllo stato del data_loader
+      - PYTHONUNBUFFERED=1
+    healthcheck:                  # verifica che il container resti attivo
       test: ["CMD-SHELL", "[ -e /proc/1 ] && exit 0 || exit 1"]  
       interval: 5s
       timeout: 5s
@@ -43,37 +41,37 @@ services:
     
   ollama:
     build:
-      context: ./ollama_service            # Costruisce l'immagine di Ollama dal Dockerfile in ollama_service
+      context: ./ollama_service  # Dockerfile Ollama
     image: text2sql-ollama:local
     container_name: ollama
     ports:
-      - "11434:11434"             # Espone la porta 11434 per le API di Ollama
+      - "11434:11434"
     volumes:
-      - ./ollama_data:/root/.ollama  # Persistenza dati di Ollama
-    healthcheck:
+      - ./ollama_data:/root/.ollama
+    healthcheck:                  # controlla modelli caricati
       test: ["CMD-SHELL", "curl -fsS http://localhost:11434/api/tags | grep -q 'gemma3:1b-it-qat' && curl -fsS http://localhost:11434/api/tags | grep -q 'gemma3:1b-it-q4_K_M'"]
-      interval: 1m       # controlla ogni 1 minuto
-      timeout: 15s       # massimo 15s per tentativo
-      retries: 60        # fino a 60 tentativi falliti
-      start_period: 60s  # attesa iniziale prima del primo test
+      interval: 1m
+      timeout: 15s
+      retries: 60
+      start_period: 60s
 
   backend:
     build:
-      context: ./backend           # Costruisce il backend
+      context: ./backend
     depends_on:
       data_loader:              
-        condition: service_healthy # Aspetta che il data_loader abbia finito
+        condition: service_healthy
       ollama:
-        condition: service_healthy # Aspetta che Ollama sia pronto
+        condition: service_healthy
     ports:
-      - "8003:8003"               # Espone backend sulla porta 8003
+      - "8003:8003"
     volumes:                       
       - ./backend:/app            
-      - ./db_utils:/app/db_utils  # Librerie condivise
+      - ./db_utils:/app/db_utils
       - ./text_to_sql:/app/text_to_sql
     environment:
-      - PYTHONUNBUFFERED=1        # Output Python non bufferizzato
-    healthcheck:
+      - PYTHONUNBUFFERED=1
+    healthcheck:                  # verifica API backend
       test: ["CMD-SHELL", "curl -f http://localhost:8003/ || exit 1"]
       interval: 5s
       timeout: 5s
@@ -90,3 +88,4 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+

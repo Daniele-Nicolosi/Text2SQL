@@ -9,7 +9,7 @@ def schema_text_from_information_schema() -> str | None:
         TABLE movies(id, titolo, anno, genere, piattaforma_1, piattaforma_2, regista_id);
         TABLE registi(id, nome, eta);
         TABLE piattaforme(id, nome);
-    oppure None se qualcosa va storto (fallback su get_schema()).
+    oppure None se qualcosa va storto.
     """
     cols_sql = """
         SELECT TABLE_NAME AS table_name, COLUMN_NAME AS column_name

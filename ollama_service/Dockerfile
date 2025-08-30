@@ -1,13 +1,15 @@
 FROM ollama/ollama:latest
 
 USER root
+
+# Aggiorna pacchetti e installa curl + certificati
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Copia lo script di start
+# Copia script di start e rendilo eseguibile
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-# Usa lo script come entrypoint
+# Imposta lo script come entrypoint
 ENTRYPOINT ["/start.sh"]

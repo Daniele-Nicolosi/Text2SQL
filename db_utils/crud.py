@@ -2,7 +2,9 @@ from typing import Optional
 from .connection import get_connection
 
 def _get_or_create_regista(cur, nome: str, eta: Optional[int]) -> int:
-    """Recupera o crea un regista e restituisce il suo ID"""
+    """
+    Recupera o crea un regista e restituisce il suo ID
+    """
     cur.execute("SELECT id FROM registi WHERE nome=? AND eta=?", (nome, eta))
     result = cur.fetchone()
     if result:
@@ -13,7 +15,9 @@ def _get_or_create_regista(cur, nome: str, eta: Optional[int]) -> int:
     return cur.lastrowid
 
 def _get_or_create_piattaforma(cur, nome: Optional[str]) -> Optional[int]:
-    """Recupera o crea una piattaforma e restituisce il suo ID"""
+    """
+    Recupera o crea una piattaforma e restituisce il suo ID
+    """
     if not nome:
         return None
     cur.execute("SELECT id FROM piattaforme WHERE nome=?", (nome,))
@@ -24,7 +28,21 @@ def _get_or_create_piattaforma(cur, nome: Optional[str]) -> Optional[int]:
     return cur.lastrowid
 
 def _cleanup_orphan_piattaforme(cur):
-    """Rimuove piattaforme non più usate da nessun film"""
+    """
+    Rimuove piattaforme non più usate da nessun film
+    """
+    # Recupera piattaforme orfane
+    cur.execute("""
+        SELECT id, nome FROM piattaforme 
+        WHERE id NOT IN (
+            SELECT DISTINCT piattaforma_1 FROM movies WHERE piattaforma_1 IS NOT NULL
+            UNION
+            SELECT DISTINCT piattaforma_2 FROM movies WHERE piattaforma_2 IS NOT NULL
+        )
+    """)
+    orphan_piattaforme = cur.fetchall()
+
+    # Esegue la cancellazione
     cur.execute("""
         DELETE FROM piattaforme 
         WHERE id NOT IN (
@@ -33,6 +51,14 @@ def _cleanup_orphan_piattaforme(cur):
             SELECT DISTINCT piattaforma_2 FROM movies WHERE piattaforma_2 IS NOT NULL
         )
     """)
+
+    # Debug finale
+    if orphan_piattaforme:
+        for pid, nome in orphan_piattaforme:
+            print(f"[DEBUG] Piattaforma eliminata: id={pid}, nome={nome}")
+    else:
+        print("[DEBUG] Nessuna piattaforma eliminata")
+
 
 def insert_or_update_film(stringa: str) -> tuple[bool, str | None]:
     """
